@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/router";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Highlight, themes } from "prism-react-renderer";
 
@@ -37,20 +38,20 @@ interface DiscordInviteData {
 }
 
 export default function Home() {
+  const router = useRouter();
   const [inviteKey, setInviteKey] = useState('');
   const [inviteData, setInviteData] = useState<DiscordInviteData | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const fetchInviteInfo = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const fetchInviteInfo = async (code: string) => {
     setLoading(true);
     setError('');
     setInviteData(null);
 
     try {
       const response = await fetch(
-        `https://discord.com/api/v9/invites/${inviteKey}?with_counts=true&with_expiration=true`
+        `https://discord.com/api/v9/invites/${code}?with_counts=true&with_expiration=true`
       );
       
       if (!response.ok) {
@@ -59,12 +60,31 @@ export default function Home() {
 
       const data = await response.json();
       setInviteData(data);
+      
+      // Update URL with the invite code
+      router.push(`/?invite=${code}`, undefined, { shallow: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch invite data');
     } finally {
       setLoading(false);
     }
   };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (inviteKey) {
+      fetchInviteInfo(inviteKey);
+    }
+  };
+
+  // Check URL parameters on mount and when router is ready
+  useEffect(() => {
+    if (router.isReady && router.query.invite) {
+      const code = router.query.invite as string;
+      setInviteKey(code);
+      fetchInviteInfo(code);
+    }
+  }, [router.isReady, router.query.invite]);
 
   return (
     <div
@@ -90,7 +110,7 @@ export default function Home() {
             DISCORD<span className="text-[#0ff]"> INVITE INFO</span>
           </h1>
 
-          <form onSubmit={fetchInviteInfo} className="mb-8 relative">
+          <form onSubmit={handleSubmit} className="mb-8 relative">
             <div className="flex gap-4">
               <input
                 type="text"
