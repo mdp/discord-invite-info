@@ -37,6 +37,16 @@ interface DiscordInviteData {
   approximate_presence_count?: number;
 }
 
+// Extract invite code from various Discord URL formats
+const extractInviteCode = (input: string): string => {
+  // Handle full URLs
+  const urlMatch = input.match(/discord(?:app)?\.(?:com|gg)\/(?:invite\/)?([a-zA-Z0-9-]+)/);
+  if (urlMatch) return urlMatch[1];
+  
+  // If no URL match, return the input as-is (assuming it's a direct code)
+  return input;
+};
+
 export default function Home() {
   const router = useRouter();
   const [inviteKey, setInviteKey] = useState('');
@@ -73,8 +83,15 @@ export default function Home() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (inviteKey) {
-      fetchInviteInfo(inviteKey);
+      const code = extractInviteCode(inviteKey.trim());
+      fetchInviteInfo(code);
     }
+  };
+
+  // Handle input changes
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setInviteKey(value);
   };
 
   // Check URL parameters on mount and when router is ready
@@ -115,8 +132,8 @@ export default function Home() {
               <input
                 type="text"
                 value={inviteKey}
-                onChange={(e) => setInviteKey(e.target.value)}
-                placeholder="ENTER_INVITE_KEY"
+                onChange={handleInputChange}
+                placeholder="ENTER_INVITE_KEY_OR_URL"
                 className="flex-1 h-12 px-4 bg-black border-2 border-[#0ff] text-[#0ff] rounded-none 
                           font-[family-name:var(--font-geist-mono)] placeholder-[#0ff]/50
                           focus:outline-none focus:border-[#ff00ff] focus:shadow-[0_0_10px_#ff00ff]
